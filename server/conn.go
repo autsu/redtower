@@ -13,19 +13,21 @@ type Conn interface {
 	Conn() net.Conn
 	RemoteAddr() net.Addr
 	ConnID() uint
-	Send([]byte, MessageType) (int, error)
-	Receive() ([]byte, error)
+	Send(data *Message) (int, error)
+	Receive() (*Message, error)
 }
 
 type TCPConn struct {
+	server   *TCPServer
 	conn     *net.TCPConn
 	id       uint
 	IsClose  bool
 	ExitChan chan bool
 }
 
-func NewTCPConn(conn *net.TCPConn, id uint) *TCPConn {
+func NewTCPConn(conn *net.TCPConn, server *TCPServer, id uint) *TCPConn {
 	return &TCPConn{
+		server:   server,
 		conn:     conn,
 		id:       id,
 		IsClose:  false,
@@ -57,16 +59,15 @@ func (t *TCPConn) ConnID() uint {
 	return t.id
 }
 
-func (t *TCPConn) Send(data []byte, msgType MessageType) (int, error) {
+func (t *TCPConn) Send(data *Message) (int, error) {
 	log.Printf("seng to %v ...", t.RemoteAddr().String())
 	if t.IsClose {
 		return 0, errors.New("read error: the connection is close")
 	}
 
-	msg := NewMessage(data, msgType)
 	pack := NewDataPack()
 
-	packmsg, err := pack.Packet(msg)
+	packmsg, err := pack.Packet(data)
 	if err != nil {
 		return 0, err
 	}
@@ -79,7 +80,7 @@ func (t *TCPConn) Send(data []byte, msgType MessageType) (int, error) {
 	return n, nil
 }
 
-func (t *TCPConn) Receive() ([]byte, error) {
+func (t *TCPConn) Receive() (*Message, error) {
 	log.Printf("receive from %v ...", t.RemoteAddr().String())
 	if t.IsClose {
 		return nil, errors.New("read error: the connection is close")
@@ -101,12 +102,45 @@ func (t *TCPConn) Receive() ([]byte, error) {
 		return nil, err
 	}
 
-	buf := make([]byte, unPack.DataLen())
+	dataLen := unPack.DataLen()
+	msgType := unPack.Type()
+
+	buf := make([]byte, dataLen)
 	_, err = t.Conn().Read(buf)
 	if err != nil {
 		log.Println("read data error: ", err)
 		return nil, err
 	}
 
-	return buf, nil
+	m := NewMessage(buf, msgType)
+	return m, nil
+}
+
+func (t *TCPConn) ReceiveAndHandler() error {
+	recvData, err := t.Receive()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	msgType := recvData.Type()
+	log.Printf("recvData: %+v", recvData)
+
+	msg := NewMessage(recvData.Data(), msgType)
+	req := NewRequest(msg, t)
+
+	done := make(chan struct{})
+	go func() {
+		if err := t.server.Router.Do(req); err != nil {
+			log.Println("router do func error: ", err)
+			done <- struct{}{}
+			return
+		}
+
+		done <- struct{}{}
+	}()
+
+	<-done
+
+	return nil
 }

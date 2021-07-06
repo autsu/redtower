@@ -18,8 +18,8 @@ const MaxPackSize = 25535
 
 type Pack interface {
 	HeadSize() uint32
-	Packet(msg Message) ([]byte, error)
-	UnPack([]byte) (Message, error)
+	Packet(msg *Message) ([]byte, error)
+	UnPack([]byte) (*Message, error)
 }
 
 type DataPack struct {}
@@ -35,7 +35,7 @@ func (d *DataPack) HeadSize() uint32 {
 	return 8
 }
 
-func (d *DataPack) Packet(msg Message) ([]byte, error) {
+func (d *DataPack) Packet(msg *Message) ([]byte, error) {
 	data := msg.Data()
 	dataLen := msg.DataLen()
 	dataType := msg.Type()
@@ -61,10 +61,10 @@ func (d *DataPack) Packet(msg Message) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func (d *DataPack) UnPack(pkg []byte) (Message, error) {
+func (d *DataPack) UnPack(pkg []byte) (*Message, error) {
 	r := bytes.NewReader(pkg)
 
-	var m message
+	var m Message
 
 	// 拆包同样也按照格式顺序
 	if err := binary.Read(r, binary.BigEndian, &m.dataLen); err != nil {

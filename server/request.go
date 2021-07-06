@@ -1,31 +1,26 @@
 package server
 
-type Request interface {
-	Conn() Conn
-	Data() []byte
-	MsgType() MessageType
-}
 
-type request struct {
-	msg  Message
+type Request struct {
+	msg  *Message
 	conn Conn
 }
 
-func NewRequest(msg Message, conn Conn) *request {
-	return &request{
+func NewRequest(msg *Message, conn Conn) *Request {
+	return &Request{
 		msg:  msg,
 		conn: conn,
 	}
 }
 
-func (r *request) Conn() Conn {
+func (r *Request) Conn() Conn {
 	return r.conn
 }
 
-func (r *request) Data() []byte {
+func (r *Request) Data() []byte {
 	return r.msg.Data()
 }
 
-func (r *request) MsgType() MessageType {
+func (r *Request) MsgType() MessageType {
 	return r.msg.Type()
 }

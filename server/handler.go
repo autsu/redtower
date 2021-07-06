@@ -2,29 +2,14 @@ package server
 
 import (
 	"fmt"
-	"io"
 	"log"
 )
 
 type Handler interface {
-	BeforeHandle(Request)
-	Handle(Request)
-	AfterHandle(Request)
+	BeforeHandle(*Request)
+	Handle(*Request)
+	AfterHandle(*Request)
 }
-
-//type BaseHandler struct {}
-//
-//func (b *BaseHandler) BeforeHandle(r Request) {
-//
-//}
-//
-//func (b *BaseHandler) Handle(r Request) {
-//
-//}
-//
-//func (b *BaseHandler) AfterHandle(r Request) {
-//
-//}
 
 type EchoHandler struct {}
 
@@ -32,30 +17,35 @@ func NewEchoHandler() *EchoHandler {
 	return &EchoHandler{}
 }
 
-func (e *EchoHandler) BeforeHandle(r Request) {
+func (e *EchoHandler) BeforeHandle(r *Request) {
 	fmt.Println("before func")
 }
 
-func (e *EchoHandler) Handle(r Request) {
-	for {
-		data, err := r.Conn().Receive()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Println(err)
-			return
-		}
+func (e *EchoHandler) Handle(r *Request) {
+	// 不需要再读了，conn.ReceiveAndHandler() 已经将数据读取出来了，
+	// 读取的数据已经保存在 r.Data() 中，这里如果再次读取会无限阻塞
 
-		_, err = r.Conn().Send(data, r.MsgType())
-		if err != nil {
-			log.Println(err)
-			return
-		}
+	//data, err := r.Conn().Receive()
+	//if err != nil {
+	//	if err == io.EOF {
+	//		log.Println("EOF")
+	//		break
+	//	}
+	//	log.Println(err)
+	//	return
+	//}
+	//log.Println("receive data: ", data)
+
+	data := r.Data()
+
+	msg := NewMessage(data, r.MsgType())
+	_, err := r.Conn().Send(msg)
+	if err != nil {
+		log.Println(err)
+		return
 	}
-
 }
 
-func (e *EchoHandler) AfterHandle(r Request) {
+func (e *EchoHandler) AfterHandle(r *Request) {
 	fmt.Println("after func")
 }
