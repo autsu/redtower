@@ -5,6 +5,7 @@ type MessageType int32
 const (
 	EchoMsg MessageType = iota
 	TextMsg
+	HTTPMsg
 )
 
 func TypeOfMessage(msgType MessageType) string {

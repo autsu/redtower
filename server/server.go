@@ -48,13 +48,36 @@ func (t *TCPServer) Start() {
 		}
 
 		tcpConn := NewTCPConn(conn, t, 1)
-		for {
-			if err := tcpConn.ReceiveAndHandler(); err != nil {
-				log.Println(err)
-				break
-			}
-		}
+		log.Printf("a new conn, remote addr: [%v]\n", tcpConn.Conn().RemoteAddr())
 
+		go func() {
+			defer tcpConn.Stop()
+			defer func() {
+				tcpConn.IsClose = true
+			}()
+			defer log.Println("conn close")
+
+			for {
+				recvData, err := tcpConn.Receive()
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				msgType := recvData.Type()
+				log.Printf("recvData: %+v", recvData)
+
+				msg := NewMessage(recvData.Data(), msgType)
+
+				if err := tcpConn.Handler(msg); err != nil {
+					log.Println(err)
+					break	// EOF 会 break
+				}
+				if tcpConn.IsClose {
+					break
+				}
+			}
+		}()
 	}
 
 }

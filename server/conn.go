@@ -43,8 +43,9 @@ func (t *TCPConn) Stop() {
 	if t.IsClose {
 		return
 	}
-	t.conn.Close()
 	t.IsClose = true
+	t.conn.Close()
+
 }
 
 func (t *TCPConn) Conn() net.Conn {
@@ -116,31 +117,13 @@ func (t *TCPConn) Receive() (*Message, error) {
 	return m, nil
 }
 
-func (t *TCPConn) ReceiveAndHandler() error {
-	recvData, err := t.Receive()
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	msgType := recvData.Type()
-	log.Printf("recvData: %+v", recvData)
-
-	msg := NewMessage(recvData.Data(), msgType)
+func (t *TCPConn) Handler(msg *Message) error {
 	req := NewRequest(msg, t)
 
-	done := make(chan struct{})
-	go func() {
-		if err := t.server.Router.Do(req); err != nil {
-			log.Println("router do func error: ", err)
-			done <- struct{}{}
-			return
-		}
-
-		done <- struct{}{}
-	}()
-
-	<-done
+	if err := t.server.Router.Do(req); err != nil {
+		log.Println("router do func error: ", err)
+		return err
+	}
 
 	return nil
 }

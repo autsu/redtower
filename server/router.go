@@ -22,7 +22,6 @@ func (r *Router) Do(req *Request) error {
 	handler.Handle(req)
 	handler.AfterHandle(req)
 
-
 	return nil
 }
 
