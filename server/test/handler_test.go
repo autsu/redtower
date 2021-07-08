@@ -58,7 +58,8 @@ func TestEchoHandlerServerV2(t *testing.T) {
 
 		tcpConn := server.NewTCPConn(conn, s, 1)
 		for {
-			if err := tcpConn.ReceiveAndHandler(); err != nil {
+			// 废弃
+			if err := tcpConn.Handler(nil); err != nil {
 				log.Println(err)
 				break
 			}
