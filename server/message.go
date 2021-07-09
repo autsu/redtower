@@ -6,6 +6,7 @@ const (
 	EchoMsg MessageType = iota
 	TextMsg
 	HTTPMsg
+	HeartBeat
 )
 
 func TypeOfMessage(msgType MessageType) string {
@@ -17,16 +18,6 @@ func TypeOfMessage(msgType MessageType) string {
 	}
 	return "未知种类的信息"
 }
-
-//type Message interface {
-//	DataLen() uint32
-//	Data() []byte
-//	Type() MessageType
-//
-//	SetDataLen(uint32)
-//	SetData([]byte)
-//	SetType(MessageType)
-//}
 
 type Message struct {
 	dataLen uint32

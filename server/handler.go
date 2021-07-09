@@ -1,24 +1,29 @@
 package server
 
 import (
-	"fmt"
 	"log"
 )
 
 type Handler interface {
 	BeforeHandle(*Request)
+	// Handle 不需要再从 conn 中读取了，在该方法的上层调用 conn.Handler() 中
+	// 已经将数据读出来了， 并保存在了 Request.Data() 中，Handle() 只需要对数
+	// 据处理即可，处理完后需要重新写入到 Request.Conn()
+	//
+	// 如果再次读取，会导致无限阻塞，因为 conn 的缓冲区已经读空了，参考 EchoHandler
+	// 中 Handle 的注释说明
 	Handle(*Request)
 	AfterHandle(*Request)
 }
 
-type EchoHandler struct {}
+type EchoHandler struct{}
 
 func NewEchoHandler() *EchoHandler {
 	return &EchoHandler{}
 }
 
 func (e *EchoHandler) BeforeHandle(r *Request) {
-	fmt.Println("before func")
+	//fmt.Println("before func")
 }
 
 func (e *EchoHandler) Handle(r *Request) {
@@ -47,5 +52,23 @@ func (e *EchoHandler) Handle(r *Request) {
 }
 
 func (e *EchoHandler) AfterHandle(r *Request) {
-	fmt.Println("after func")
+	//fmt.Println("after func")
+}
+
+type HeartBeatHandler struct{}
+
+func NewHeartBeatHandler() *HeartBeatHandler {
+	return &HeartBeatHandler{}
+}
+
+func (h *HeartBeatHandler) BeforeHandle(req *Request) {
+
+}
+
+func (h *HeartBeatHandler) Handle(req *Request) {
+
+}
+
+func (h *HeartBeatHandler) AfterHandle(req *Request) {
+
 }

@@ -12,6 +12,7 @@ import (
 func TestTimeoutServer(t *testing.T) {
 	s := server.NewTCPServer("localhost", "8080", "server1")
 	s.AddHandler(server.EchoMsg, server.NewEchoHandler())
+	s.AddHandler(server.HeartBeat, server.NewHeartBeatHandler())
 
 	s.Start()
 }
@@ -26,17 +27,17 @@ func TestTimeOutDial(t *testing.T) {
 	tcpConn := server.NewTCPConn(conn, nil, 1)
 	msgs := []string{"666", "456", "789"}
 
-	go func() {
-		for {
-			select {
-			case <-server.HeartbeatRequestChan:
-				log.Println("client receive server heartbeat request")
-				server.HeartbeatResponseChan <- struct{}{}
-			default:
-
-			}
-		}
-	}()
+	//go func() {
+	//	for {
+	//		select {
+	//		case <-server.HeartbeatRequestChan:
+	//			log.Println("client receive server heartbeat request")
+	//			server.HeartbeatResponseChan <- struct{}{}
+	//		default:
+	//
+	//		}
+	//	}
+	//}()
 
 	for _, msg := range msgs {
 		msg := server.NewMessage([]byte(msg), server.EchoMsg)

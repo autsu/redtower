@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 	"net"
+	"zinx/conf"
 )
 
 type Server interface {
@@ -12,18 +13,21 @@ type Server interface {
 }
 
 type TCPServer struct {
-	Port   string
-	Host   string
-	Name   string
-	Router *Router
+	Port       string
+	Host       string
+	Name       string
+	Router     *Router
+	ConnManage *ConnManage
+	Pool       *Pool
 }
 
 func NewTCPServer(host, port, name string) *TCPServer {
 	return &TCPServer{
-		Port:   port,
-		Host:   host,
-		Name:   name,
-		Router: NewRouter(),
+		Port:       port,
+		Host:       host,
+		Name:       name,
+		Router:     NewRouter(),
+		ConnManage: NewConnManage(),
 	}
 }
 
@@ -40,6 +44,17 @@ func (t *TCPServer) Start() {
 		return
 	}
 
+	var id uint64 = 1
+
+	go func() {
+		// 开启任务池
+		t.Pool = NewPool(conf.DefaultGoroutineMaxNum, t.Router)
+		if err := t.Pool.StartWorkerPool(); err != nil {
+			log.Println("start worker pool error: ", err)
+			return
+		}
+	}()
+
 	for {
 		conn, err := listen.AcceptTCP()
 		if err != nil {
@@ -47,31 +62,34 @@ func (t *TCPServer) Start() {
 			continue
 		}
 
-		tcpConn := NewTCPConn(conn, t, 1)
+		if t.ConnManage.Len() > conf.MaxConnNum {
+			conn.Write([]byte("Your connection request was rejected"))
+			log.Printf("new conn[%v] was rejected\n", conn.RemoteAddr())
+		}
+
+		tcpConn := NewTCPConn(conn, t, id)
 		log.Printf("a new conn, remote addr: [%v]\n", tcpConn.Conn().RemoteAddr())
+
+		id++
+		t.ConnManage.Add(tcpConn) // 将连接添加到 connManage
+
+		// 开启心跳检测
+		go tcpConn.Heartbeat()
 
 		go func() {
 			defer tcpConn.Stop()
 			defer func() {
 				tcpConn.IsClose = true
+				// 从 connManage 中移除
+				t.ConnManage.Remove(tcpConn)
 			}()
-			defer log.Println("conn close")
+			defer log.Printf("conn [%v] close\n", tcpConn.RemoteAddr())
+
 
 			for {
-				recvData, err := tcpConn.Receive()
-				if err != nil {
+				if err := tcpConn.Handler(); err != nil {
 					log.Println(err)
-					return
-				}
-
-				msgType := recvData.Type()
-				log.Printf("recvData: %+v", recvData)
-
-				msg := NewMessage(recvData.Data(), msgType)
-
-				if err := tcpConn.Handler(msg); err != nil {
-					log.Println(err)
-					break	// EOF 会 break
+					break // EOF 会 break
 				}
 				if tcpConn.IsClose {
 					break

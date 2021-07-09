@@ -59,7 +59,7 @@ func TestEchoHandlerServerV2(t *testing.T) {
 		tcpConn := server.NewTCPConn(conn, s, 1)
 		for {
 			// 废弃
-			if err := tcpConn.Handler(nil); err != nil {
+			if err := tcpConn.Handler(); err != nil {
 				log.Println(err)
 				break
 			}
@@ -88,7 +88,7 @@ func TestEchoHandlerDial(t *testing.T) {
 	msgs := []string{"666", "456", "789"}
 
 	for {
-		// scan 只能扫描到 main goroutine，test 中无法扫描到
+		// scan 只能扫描到 main goroutine，fff 中无法扫描到
 		//var input string
 		//_, err = fmt.Scan(&input)
 		//if err != nil {
@@ -129,7 +129,7 @@ func TestEchoHandlerDial1(t *testing.T) {
 	msgs := []string{"666", "456", "789"}
 
 	for {
-		// scan 只能扫描到 main goroutine，test 中无法扫描到
+		// scan 只能扫描到 main goroutine，fff 中无法扫描到
 		//var input string
 		//_, err = fmt.Scan(&input)
 		//if err != nil {
