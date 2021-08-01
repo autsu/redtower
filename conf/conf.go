@@ -2,6 +2,7 @@ package conf
 
 import "time"
 
+// TODO 使用配置文件
 const (
 	DefaultDeadlineTime    = time.Second * 30 // 默认触发心跳检测时间
 	SendHeartbeatTime      = time.Second * 5  // 多久发送一次心跳

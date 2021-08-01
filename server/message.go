@@ -1,5 +1,6 @@
 package server
 
+// TODO MessageType 可定制化
 type MessageType int32
 
 const (
@@ -7,14 +8,21 @@ const (
 	TextMsg
 	HTTPMsg
 	HeartBeat
+	ErrorMsg
 )
 
 func TypeOfMessage(msgType MessageType) string {
 	switch msgType {
 	case EchoMsg:
-		return "回响信息"
+		return "回显信息"
 	case TextMsg:
 		return "文本信息"
+	case ErrorMsg:
+		return "错误信息"
+	case HeartBeat:
+		return "心跳信息"
+	case HTTPMsg:
+		return "HTTP 信息"
 	}
 	return "未知种类的信息"
 }

@@ -3,44 +3,27 @@ package main
 import (
 	"fmt"
 	"log"
-	"net"
 	"time"
-	"zinx/conf"
+	"zinx/client"
 	"zinx/server"
 )
 
 func main() {
-	tcpaddr, _ := net.ResolveTCPAddr("tcp", ":8080")
-	conn, err := net.DialTCP("tcp", nil, tcpaddr)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	tcpConn := server.NewTCPConn(conn, nil, 1)
-	msgs := []string{"666", "456", "789"}
-
+	conn := client.NewClientWithTCP("localhost", "8080")
 	// 发送心跳包
-	go func() {
-		ticker := time.NewTicker(conf.SendHeartbeatTime)
-		for {
-			select {
-			case <-ticker.C:
-				heartbeat := server.NewMessage([]byte(""), server.HeartBeat)
-				tcpConn.Send(heartbeat)
-				//log.Println("send heartbreat to server")
-			}
-		}
-	}()
+	go conn.SendHeartbeat()
+
+	msgs := []string{"666", "456", "789"}
 
 	for _, msg := range msgs {
 		msg := server.NewMessage([]byte(msg), server.EchoMsg)
-		n, err := tcpConn.Send(msg)
+		n, err := conn.Send(msg)
 		log.Printf("send %d bytes", n)
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		receive, err := tcpConn.Receive()
+		receive, err := conn.Receive()
 		if err != nil {
 			log.Fatalln(err)
 		}

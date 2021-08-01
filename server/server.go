@@ -1,6 +1,7 @@
 package server
 
 import (
+	reuseport "github.com/kavu/go_reuseport"
 	"log"
 	"net"
 	"zinx/conf"
@@ -32,13 +33,17 @@ func NewTCPServer(host, port, name string) *TCPServer {
 }
 
 func (t *TCPServer) Start() {
-	log.Println("server start...")
-
 	addr := t.Host + ":" + t.Port
+	log.Printf("server[name: %v] start in %v... \n", t.Name, addr)
 
-	tcpaddr, _ := net.ResolveTCPAddr("tcp", addr)
+	// 开启 SO_REUSEPORT 端口复用
+	l, err := reuseport.Listen("tcp", addr)
+	listen, ok := l.(*net.TCPListener)
+	if !ok {
+		log.Println("not a tcp listener: ", err)
+		return
+	}
 
-	listen, err := net.ListenTCP("tcp", tcpaddr)
 	if err != nil {
 		log.Println("listen socket error: ", err)
 		return
@@ -67,7 +72,7 @@ func (t *TCPServer) Start() {
 			log.Printf("new conn[%v] was rejected\n", conn.RemoteAddr())
 		}
 
-		tcpConn := NewTCPConn(conn, t, id)
+		tcpConn := NewTCPConn(conn, t)
 		log.Printf("a new conn, remote addr: [%v]\n", tcpConn.Conn().RemoteAddr())
 
 		id++
@@ -83,8 +88,8 @@ func (t *TCPServer) Start() {
 				// 从 connManage 中移除
 				t.ConnManage.Remove(tcpConn)
 			}()
-			defer log.Printf("conn [%v] close\n", tcpConn.RemoteAddr())
-
+			defer log.Printf("conn [id = %v, addr = %v] close\n",
+				tcpConn.id, tcpConn.RemoteAddr())
 
 			for {
 				if err := tcpConn.Handler(); err != nil {

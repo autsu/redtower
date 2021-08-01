@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync/atomic"
 )
 
 type Conn interface {
@@ -17,6 +18,9 @@ type Conn interface {
 	Handler() error                  // 处理 conn 中的数据
 }
 
+// 每创建一条 conn，便从这里取得一个新的 connId，之后 connId++（原子的）
+var connId uint64 = 1
+
 type TCPConn struct {
 	server        *TCPServer
 	conn          *net.TCPConn
@@ -25,14 +29,20 @@ type TCPConn struct {
 	HeartbeatChan chan struct{}
 }
 
-func NewTCPConn(conn *net.TCPConn, server *TCPServer, id uint64) *TCPConn {
-	return &TCPConn{
+func NewTCPConn(conn *net.TCPConn, server *TCPServer) *TCPConn {
+	t :=  &TCPConn{
 		server:        server,
 		conn:          conn,
-		id:            id,
+		id:            atomic.LoadUint64(&connId),
 		IsClose:       false,
 		HeartbeatChan: make(chan struct{}),
 	}
+	// global conn id + 1
+	for !atomic.CompareAndSwapUint64(&connId, connId, connId+1) {
+
+	}
+
+	return t
 }
 
 func (t *TCPConn) Stop() {
@@ -123,16 +133,13 @@ func (t *TCPConn) Handler() error {
 	t.HeartbeatChan <- struct{}{}
 
 	msgType := recvData.Type()
-	log.Printf("recvData: %+v", recvData)
+	log.Printf("recvData: data: %v, type: %v",
+		string(recvData.Data()), TypeOfMessage(msgType))
 
 	msg := NewMessage(recvData.Data(), msgType)
 	req := NewRequest(msg, t)
 
 	t.server.Pool.AddWork(req)
-	//if err := t.server.Router.Do(req); err != nil {
-	//	log.Println("router do func error: ", err)
-	//	return err
-	//}
 
 	return nil
 }
