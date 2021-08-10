@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	reuseport "github.com/kavu/go_reuseport"
 	"log"
 	"net"
@@ -8,32 +9,35 @@ import (
 )
 
 type Server interface {
-	Start()
-	Stop()
-	Server()
+	Start(context.Context)
+	Stop(context.Context)
+	Server(context.Context)
+	ConnManage() *ConnManage
+	AddHandler(MessageType, Handler)
+	Pool() *Pool
 }
 
 type TCPServer struct {
-	Port       string
-	Host       string
-	Name       string
-	Router     *Router
-	ConnManage *ConnManage
-	Pool       *Pool
+	port   string
+	host   string
+	Name   string
+	router *Router
+	manage *ConnManage
+	pool   *Pool
 }
 
 func NewTCPServer(host, port, name string) *TCPServer {
 	return &TCPServer{
-		Port:       port,
-		Host:       host,
-		Name:       name,
-		Router:     NewRouter(),
-		ConnManage: NewConnManage(),
+		port:   port,
+		host:   host,
+		Name:   name,
+		router: NewRouter(),
+		manage: NewConnManage(),
 	}
 }
 
-func (t *TCPServer) Start() {
-	addr := t.Host + ":" + t.Port
+func (t *TCPServer) Start(ctx context.Context) {
+	addr := t.host + ":" + t.port
 	log.Printf("server[name: %v] start in %v... \n", t.Name, addr)
 
 	// 开启 SO_REUSEPORT 端口复用
@@ -53,8 +57,8 @@ func (t *TCPServer) Start() {
 
 	go func() {
 		// 开启任务池
-		t.Pool = NewPool(conf.DefaultGoroutineMaxNum, t.Router)
-		if err := t.Pool.StartWorkerPool(); err != nil {
+		t.pool = NewPool(conf.DefaultGoroutineMaxNum, t.router)
+		if err := t.pool.StartWorkerPool(ctx); err != nil {
 			log.Println("start worker pool error: ", err)
 			return
 		}
@@ -67,7 +71,7 @@ func (t *TCPServer) Start() {
 			continue
 		}
 
-		if t.ConnManage.Len() > conf.MaxConnNum {
+		if t.manage.Len() > conf.MaxConnNum {
 			conn.Write([]byte("Your connection request was rejected"))
 			log.Printf("new conn[%v] was rejected\n", conn.RemoteAddr())
 		}
@@ -76,17 +80,18 @@ func (t *TCPServer) Start() {
 		log.Printf("a new conn, remote addr: [%v]\n", tcpConn.Conn().RemoteAddr())
 
 		id++
-		t.ConnManage.Add(tcpConn) // 将连接添加到 connManage
+		t.manage.Add(tcpConn) // 将连接添加到 connManage
 
 		// 开启心跳检测
-		go tcpConn.Heartbeat()
+		heartBeat := NewHeartBeat(tcpConn)
+		go heartBeat.Start()
 
 		go func() {
 			defer tcpConn.Stop()
 			defer func() {
-				tcpConn.IsClose = true
+				tcpConn.SetIsClose(true)
 				// 从 connManage 中移除
-				t.ConnManage.Remove(tcpConn)
+				t.manage.Remove(tcpConn)
 			}()
 			defer log.Printf("conn [id = %v, addr = %v] close\n",
 				tcpConn.id, tcpConn.RemoteAddr())
@@ -96,7 +101,7 @@ func (t *TCPServer) Start() {
 					log.Println(err)
 					break // EOF 会 break
 				}
-				if tcpConn.IsClose {
+				if tcpConn.IsClose() {
 					break
 				}
 			}
@@ -105,14 +110,21 @@ func (t *TCPServer) Start() {
 
 }
 
-func (t *TCPServer) Stop() {
+func (t *TCPServer) Stop(ctx context.Context) {
 
 }
 
-func (t *TCPServer) Server() {
+func (t *TCPServer) Server(ctx context.Context) {
+	t.Start(ctx)
+}
 
+func (t *TCPServer) ConnManage() *ConnManage {
+	return t.manage
+}
+func (t *TCPServer) Pool() *Pool {
+	return t.pool
 }
 
 func (t *TCPServer) AddHandler(typ MessageType, handler Handler) {
-	t.Router.AddRouter(typ, handler)
+	t.router.AddRouter(typ, handler)
 }

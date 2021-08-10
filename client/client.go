@@ -51,7 +51,7 @@ func (c *Client) SendHeartbeat() {
 	for {
 		select {
 		case <-ticker.C:
-			heartbeat := server.NewMessage([]byte(""), server.HeartBeat)
+			heartbeat := server.NewMessage([]byte(""), server.HeartBeatMsg)
 			c.conn.Send(heartbeat)
 			//log.Println("send heartbreat to server")
 		}

@@ -1,6 +1,9 @@
 package server
 
-import "zinx/conf"
+import (
+	"context"
+	"zinx/conf"
+)
 
 // +-----+-----+-----+
 // +  G  +  G  +  G  +		goroutine
@@ -37,23 +40,25 @@ func (p *Pool) AddWork(r *Request) {
 	p.WorkQueue[index] <- r
 }
 
-func (p *Pool) StartWorkerPool() (err error) {
+func (p *Pool) StartWorkerPool(ctx context.Context) (err error) {
 	for i := 0; i < int(p.Size); i++ {
 		p.WorkQueue[i] = make(chan *Request, conf.DefaultQueueSize)
 		go func(i int) {
-			err = p.doWork(p.WorkQueue[i])
+			err = p.doWork(ctx, p.WorkQueue[i])
 		}(i)
 	}
 	return
 }
 
-func (p *Pool) doWork(c chan *Request) error {
+func (p *Pool) doWork(ctx context.Context, c chan *Request) error {
 	for {
 		select {
 		case req := <-c:
 			if err := p.R.Do(req); err != nil {
 				return err
 			}
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 }

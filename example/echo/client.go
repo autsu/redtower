@@ -13,10 +13,10 @@ func main() {
 	// 发送心跳包
 	go conn.SendHeartbeat()
 
-	msgs := []string{"666", "456", "789"}
+	msgs := []string{"666", "456", "789", "999", "zxzxz", "12435", "dsfsd"}
 
-	for _, msg := range msgs {
-		msg := server.NewMessage([]byte(msg), server.EchoMsg)
+	for i := 0; i < len(msgs); i++ {
+		msg := server.NewMessage([]byte(msgs[i]), server.EchoMsg)
 		n, err := conn.Send(msg)
 		log.Printf("send %d bytes", n)
 		if err != nil {
@@ -30,5 +30,9 @@ func main() {
 
 		fmt.Println(string(receive.Data()))
 		time.Sleep(time.Second * 3)
+
+		if i == len(msgs)-1 {
+			i = 0
+		}
 	}
 }

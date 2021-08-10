@@ -1,7 +1,9 @@
 package server
 
 import (
+	"fmt"
 	"log"
+	"strings"
 	"sync"
 )
 
@@ -24,6 +26,7 @@ func (c *ConnManage) Add(conn Conn) {
 
 	log.Printf("conn[id = %d, addr = %s] add to manage\n",
 		conn.ConnID(), conn.RemoteAddr().String())
+	log.Printf("cur conn manage info: %v\n", c.String())
 }
 
 func (c *ConnManage) Remove(conn Conn) {
@@ -51,4 +54,13 @@ func (c *ConnManage) Len() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return len(c.conns)
+}
+
+func (c *ConnManage) String() string {
+	var sb strings.Builder
+	for id, conn := range c.conns {
+		info := fmt.Sprintf("conn[id = %d] addr: %v\n", id, conn.RemoteAddr().String())
+		sb.WriteString(info)
+	}
+	return sb.String()
 }

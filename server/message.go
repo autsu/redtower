@@ -1,13 +1,13 @@
 package server
 
-// TODO MessageType 可定制化
+
 type MessageType int32
 
 const (
 	EchoMsg MessageType = iota
 	TextMsg
 	HTTPMsg
-	HeartBeat
+	HeartBeatMsg
 	ErrorMsg
 )
 
@@ -19,7 +19,7 @@ func TypeOfMessage(msgType MessageType) string {
 		return "文本信息"
 	case ErrorMsg:
 		return "错误信息"
-	case HeartBeat:
+	case HeartBeatMsg:
 		return "心跳信息"
 	case HTTPMsg:
 		return "HTTP 信息"

@@ -16,6 +16,9 @@ type Conn interface {
 	Send(data *Message) (int, error) // 发送数据到 conn
 	Receive() (*Message, error)      // 从 conn 中接收数据
 	Handler() error                  // 处理 conn 中的数据
+	IsClose() bool
+	SetIsClose(bool)
+	HeartBeatChan() chan struct{}
 }
 
 // 每创建一条 conn，便从这里取得一个新的 connId，之后 connId++（原子的）
@@ -25,17 +28,17 @@ type TCPConn struct {
 	server        *TCPServer
 	conn          *net.TCPConn
 	id            uint64
-	IsClose       bool
-	HeartbeatChan chan struct{}
+	isClose       bool
+	heartbeatChan chan struct{}
 }
 
 func NewTCPConn(conn *net.TCPConn, server *TCPServer) *TCPConn {
-	t :=  &TCPConn{
+	t := &TCPConn{
 		server:        server,
 		conn:          conn,
 		id:            atomic.LoadUint64(&connId),
-		IsClose:       false,
-		HeartbeatChan: make(chan struct{}),
+		isClose:       false,
+		heartbeatChan: make(chan struct{}),
 	}
 	// global conn id + 1
 	for !atomic.CompareAndSwapUint64(&connId, connId, connId+1) {
@@ -46,10 +49,10 @@ func NewTCPConn(conn *net.TCPConn, server *TCPServer) *TCPConn {
 }
 
 func (t *TCPConn) Stop() {
-	if t.IsClose {
+	if t.isClose {
 		return
 	}
-	t.IsClose = true
+	t.isClose = true
 	t.conn.Close()
 
 }
@@ -68,7 +71,7 @@ func (t *TCPConn) ConnID() uint64 {
 
 func (t *TCPConn) Send(data *Message) (int, error) {
 	log.Printf("seng to %v ...", t.RemoteAddr().String())
-	if t.IsClose {
+	if t.isClose {
 		return 0, errors.New("read error: the connection is close")
 	}
 
@@ -89,7 +92,7 @@ func (t *TCPConn) Send(data *Message) (int, error) {
 
 func (t *TCPConn) Receive() (*Message, error) {
 	log.Printf("receive from %v ...", t.RemoteAddr().String())
-	if t.IsClose {
+	if t.isClose {
 		return nil, errors.New("read error: the connection is close")
 	}
 
@@ -130,16 +133,28 @@ func (t *TCPConn) Handler() error {
 		return err
 	}
 	// 接收到了数据，则发送信号到 t.HeartbeatChan
-	t.HeartbeatChan <- struct{}{}
+	t.heartbeatChan <- struct{}{}
 
 	msgType := recvData.Type()
-	log.Printf("recvData: data: %v, type: %v",
-		string(recvData.Data()), TypeOfMessage(msgType))
+	//log.Printf("recvData: data: %v, type: %v",
+	//	string(recvData.Data()), TypeOfMessage(msgType))
 
 	msg := NewMessage(recvData.Data(), msgType)
 	req := NewRequest(msg, t)
 
-	t.server.Pool.AddWork(req)
+	t.server.Pool().AddWork(req)
 
 	return nil
+}
+
+func (t *TCPConn) IsClose() bool {
+	return t.isClose
+}
+
+func (t *TCPConn) SetIsClose(isClose bool) {
+	t.isClose = isClose
+}
+
+func (t *TCPConn) HeartBeatChan() chan struct{} {
+	return t.heartbeatChan
 }
