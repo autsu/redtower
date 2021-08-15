@@ -14,20 +14,48 @@ type Handler interface {
 	AfterHandle(*Request)
 }
 
-type HeartBeatHandler struct{}
+// BasicHandler 空实现，可以通过组合该结构体来实现接口，
+// 这样可以让某些情况下实现接口更简洁，比如：
+//
+// 一个需要实现 Handler 的结构体，但是只需要实现 Handler.Handle()，其他两个方法为空，
+// 此时只需要这么写即可：
+//
+// type A struct {
+//		BasicHandler
+// }
+//
+// 重写 Handler 方法即可
+// func (a *A) Handler(r *Request) {
+// 		// .... 实现内容
+// }
+//
+// 如果没有 BasicHandler，则需要实现三个方法，即便 BeforeHandle 和 AfterHandle 没有
+// 任何内容，写起来繁琐冗余
+type BasicHandler struct {
+}
+
+func (b *BasicHandler) BeforeHandle(req *Request) {
+
+}
+
+func (b *BasicHandler) Handle(req *Request) {
+
+}
+
+func (b *BasicHandler) AfterHandle(req *Request) {
+
+}
+
+// HeartBeatHandler 心跳包的处理函数
+type HeartBeatHandler struct {
+	BasicHandler
+}
 
 func NewHeartBeatHandler() *HeartBeatHandler {
 	return &HeartBeatHandler{}
 }
 
-func (h *HeartBeatHandler) BeforeHandle(req *Request) {
-
-}
-
 func (h *HeartBeatHandler) Handle(req *Request) {
-
-}
-
-func (h *HeartBeatHandler) AfterHandle(req *Request) {
-
+	// 接收到了心跳包，则发送信号到 conn.HeartbeatChan
+	req.Conn().HeartBeatChan() <- struct{}{}
 }

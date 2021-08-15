@@ -27,13 +27,17 @@ type TCPServer struct {
 }
 
 func NewTCPServer(host, port, name string) *TCPServer {
-	return &TCPServer{
+	t := &TCPServer{
 		port:   port,
 		host:   host,
 		Name:   name,
 		router: NewRouter(),
 		manage: NewConnManage(),
 	}
+	// 默认在路由中添加心跳处理函数
+	t.AddHandler(HeartBeatMsg, NewHeartBeatHandler())
+
+	return t
 }
 
 func (t *TCPServer) Start(ctx context.Context) {
@@ -53,16 +57,13 @@ func (t *TCPServer) Start(ctx context.Context) {
 		return
 	}
 
-	var id uint64 = 1
+	var (
+		id uint64 = 1
+	)
 
-	go func() {
-		// 开启任务池
-		t.pool = NewPool(conf.DefaultGoroutineMaxNum, t.router)
-		if err := t.pool.StartWorkerPool(ctx); err != nil {
-			log.Println("start worker pool error: ", err)
-			return
-		}
-	}()
+	// 开启任务池
+	t.pool = NewPool(conf.DefaultGoroutineMaxNum, t.router)
+	t.pool.StartWorkerPool(ctx)
 
 	for {
 		conn, err := listen.AcceptTCP()
@@ -87,14 +88,14 @@ func (t *TCPServer) Start(ctx context.Context) {
 		go heartBeat.Start()
 
 		go func() {
-			defer tcpConn.Stop()
 			defer func() {
+				tcpConn.Stop()
 				tcpConn.SetIsClose(true)
 				// 从 connManage 中移除
 				t.manage.Remove(tcpConn)
+				log.Printf("conn [id = %v, addr = %v] close\n",
+					tcpConn.id, tcpConn.RemoteAddr())
 			}()
-			defer log.Printf("conn [id = %v, addr = %v] close\n",
-				tcpConn.id, tcpConn.RemoteAddr())
 
 			for {
 				if err := tcpConn.Handler(); err != nil {

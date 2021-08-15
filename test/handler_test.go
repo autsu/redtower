@@ -83,7 +83,6 @@ func TestEchoHandlerDial(t *testing.T) {
 		log.Fatalln(err)
 	}
 
-
 	tcpConn := server.NewTCPConn(conn, nil, 1)
 	msgs := []string{"666", "456", "789"}
 
@@ -123,7 +122,6 @@ func TestEchoHandlerDial1(t *testing.T) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-
 
 	tcpConn := server.NewTCPConn(conn, nil, 1)
 	msgs := []string{"666", "456", "789"}

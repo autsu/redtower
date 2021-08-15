@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -10,7 +12,7 @@ import (
 )
 
 type Client struct {
-	conn     server.Conn
+	conn server.Conn
 }
 
 func NewClientWithTCP(dialHost, dialPort string) *Client {
@@ -43,17 +45,28 @@ func (c *Client) Receive() (*server.Message, error) {
 	if err != nil {
 		return nil, err
 	}
+	if receive.Type() == server.ErrorMsg {
+		return nil, errors.New(string(receive.Data()))
+	}
 	return receive, nil
 }
 
-func (c *Client) SendHeartbeat() {
-	ticker := time.NewTicker(conf.SendHeartbeatTime)
-	for {
-		select {
-		case <-ticker.C:
-			heartbeat := server.NewMessage([]byte(""), server.HeartBeatMsg)
-			c.conn.Send(heartbeat)
-			//log.Println("send heartbreat to server")
+// StartHeartbeat 发送心跳包给服务端
+// change 2021.8.15: 在方法内部开启 goroutine，而不是让调用方自己开启 goroutine，
+// 现在只需要 c.SendHearBeat() 即可，而不是 go c.SendHearBeat()
+func (c *Client) StartHeartbeat(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(conf.SendHeartbeatTime)
+		for {
+			select {
+			case <-ticker.C:
+				heartbeat := server.NewMessage([]byte(""), server.HeartBeatMsg)
+				c.conn.Send(heartbeat)
+				log.Println("send heartbreat to server")
+			case <-ctx.Done():
+				log.Println("done! err: ", ctx.Err())
+				return
+			}
 		}
-	}
+	}()
 }

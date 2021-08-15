@@ -63,7 +63,6 @@ func TestPack(t *testing.T) {
 
 		fmt.Println((string)(b))
 
-
 	}
 }
 
@@ -90,6 +89,5 @@ func TestPackClient(t *testing.T) {
 	if err != nil {
 		log.Fatalln("write error: ", err)
 	}
-
 
 }

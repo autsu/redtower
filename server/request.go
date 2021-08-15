@@ -1,6 +1,6 @@
 package server
 
-
+// Request 包装了 conn 和 msg，主要用于 handler
 type Request struct {
 	msg  *Message
 	conn Conn

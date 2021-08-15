@@ -54,7 +54,6 @@ func (t *TCPConn) Stop() {
 	}
 	t.isClose = true
 	t.conn.Close()
-
 }
 
 func (t *TCPConn) Conn() net.Conn {
@@ -132,8 +131,6 @@ func (t *TCPConn) Handler() error {
 		log.Println(err)
 		return err
 	}
-	// 接收到了数据，则发送信号到 t.HeartbeatChan
-	t.heartbeatChan <- struct{}{}
 
 	msgType := recvData.Type()
 	//log.Printf("recvData: data: %v, type: %v",

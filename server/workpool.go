@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"log"
 	"zinx/conf"
 )
 
@@ -40,25 +41,29 @@ func (p *Pool) AddWork(r *Request) {
 	p.WorkQueue[index] <- r
 }
 
-func (p *Pool) StartWorkerPool(ctx context.Context) (err error) {
+func (p *Pool) StartWorkerPool(ctx context.Context) {
 	for i := 0; i < int(p.Size); i++ {
 		p.WorkQueue[i] = make(chan *Request, conf.DefaultQueueSize)
 		go func(i int) {
-			err = p.doWork(ctx, p.WorkQueue[i])
+			p.doWork(ctx, p.WorkQueue[i])
 		}(i)
 	}
-	return
 }
 
-func (p *Pool) doWork(ctx context.Context, c chan *Request) error {
+func (p *Pool) doWork(ctx context.Context, c chan *Request) {
 	for {
 		select {
 		case req := <-c:
 			if err := p.R.Do(req); err != nil {
-				return err
+				log.Printf("handler conn[id=%d], addr=%s error: %v \n",
+					req.Conn().ConnID(), req.Conn().RemoteAddr(), err)
+
+				msg := NewMessage([]byte(err.Error()), ErrorMsg)
+				// 向连接发送错误信息
+				req.Conn().Send(msg)
 			}
 		case <-ctx.Done():
-			return ctx.Err()
+			return
 		}
 	}
 }
