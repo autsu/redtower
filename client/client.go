@@ -15,7 +15,7 @@ type Client struct {
 	conn server.Conn
 }
 
-func NewClientWithTCP(dialHost, dialPort string) *Client {
+func NewClientWithTCP(ctx context.Context, dialHost, dialPort string) *Client {
 	tcpaddr, _ := net.ResolveTCPAddr("tcp",
 		fmt.Sprintf("%s:%s", dialHost, dialPort))
 
@@ -26,9 +26,12 @@ func NewClientWithTCP(dialHost, dialPort string) *Client {
 
 	tcpConn := server.NewTCPConn(conn, nil)
 
-	return &Client{
+	cli := &Client{
 		conn: tcpConn,
 	}
+	// 开启心跳
+	cli.startHeartbeat(ctx)
+	return cli
 }
 
 func (c *Client) Send(msg *server.Message) (int, error) {
@@ -54,7 +57,8 @@ func (c *Client) Receive() (*server.Message, error) {
 // StartHeartbeat 发送心跳包给服务端
 // change 2021.8.15: 在方法内部开启 goroutine，而不是让调用方自己开启 goroutine，
 // 现在只需要 c.SendHearBeat() 即可，而不是 go c.SendHearBeat()
-func (c *Client) StartHeartbeat(ctx context.Context) {
+// change 2021.9.6: 现在不需要手动调用，在 NewClientWithTCP 中会自动开启心跳包发送
+func (c *Client) startHeartbeat(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(conf.SendHeartbeatTime)
 		for {

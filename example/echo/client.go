@@ -10,8 +10,8 @@ import (
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Ltime)
-	cli := client.NewClientWithTCP("localhost", "8080")
-	cli.StartHeartbeat(context.Background())
+	ctx := context.Background()
+	cli := client.NewClientWithTCP(ctx, "localhost", "8080")
 
 	msgs := []string{"666", "456", "789", "999", "zxzxz", "12435", "dsfsd"}
 

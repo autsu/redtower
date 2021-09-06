@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"zinx/client"
@@ -8,9 +9,10 @@ import (
 )
 
 func main() {
-	conn := client.NewClientWithTCP("localhost", "8080")
+	ctx := context.Background()
+	conn := client.NewClientWithTCP(ctx, "localhost", "8080")
 	// 发送心跳包
-	go conn.SendHeartbeat()
+	// conn.StartHeartbeat(context.Background())
 
 	data := `POST /?123=456 HTTP/1.1
 
