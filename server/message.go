@@ -1,31 +1,26 @@
 package server
 
+import "math"
 
 type MessageType int32
 
 const (
-	EchoMsg MessageType = iota
-	TextMsg
-	HTTPMsg
-	HeartBeatMsg
+	HeartBeatMsg MessageType = iota + math.MinInt32	// 防止和用户自定义类型冲突
 	ErrorMsg
+	OriginalMsg // 不进行任何处理
 )
 
-func TypeOfMessage(msgType MessageType) string {
-	switch msgType {
-	case EchoMsg:
-		return "回显信息"
-	case TextMsg:
-		return "文本信息"
-	case ErrorMsg:
-		return "错误信息"
-	case HeartBeatMsg:
-		return "心跳信息"
-	case HTTPMsg:
-		return "HTTP 信息"
-	}
-	return "未知种类的信息"
-}
+//func TypeOfMessage(msgType MessageType) string {
+//	switch msgType {
+//	case ErrorMsg:
+//		return "错误信息"
+//	case HeartBeatMsg:
+//		return "心跳信息"
+//	case OriginalMsg:
+//		return "原始信息"
+//	}
+//	return "未知种类的信息"
+//}
 
 type Message struct {
 	dataLen uint32
@@ -38,6 +33,14 @@ func NewMessage(data []byte, type_ MessageType) *Message {
 		dataLen: (uint32)(len(data)),
 		data:    data,
 		type_:   type_,
+	}
+}
+
+func NewErrorMessage(data []byte) *Message {
+	return &Message{
+		dataLen: (uint32)(len(data)),
+		data:    data,
+		type_:   ErrorMsg,
 	}
 }
 

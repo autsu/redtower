@@ -31,8 +31,7 @@ type Handler interface {
 //
 // 如果没有 BasicHandler，则需要实现三个方法，即便 BeforeHandle 和 AfterHandle 没有
 // 任何内容，写起来繁琐冗余
-type BasicHandler struct {
-}
+type BasicHandler struct {}
 
 func (b *BasicHandler) BeforeHandle(req *Request) {
 
@@ -47,15 +46,15 @@ func (b *BasicHandler) AfterHandle(req *Request) {
 }
 
 // HeartBeatHandler 心跳包的处理函数
-type HeartBeatHandler struct {
+type heartBeatHandler struct {
 	BasicHandler
 }
 
-func NewHeartBeatHandler() *HeartBeatHandler {
-	return &HeartBeatHandler{}
+func NewHeartBeatHandler() *heartBeatHandler {
+	return &heartBeatHandler{}
 }
 
-func (h *HeartBeatHandler) Handle(req *Request) {
+func (h *heartBeatHandler) Handle(req *Request) {
 	// 接收到了心跳包，则发送信号到 conn.HeartbeatChan
 	req.Conn().HeartBeatChan() <- struct{}{}
 }

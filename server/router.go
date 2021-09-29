@@ -9,7 +9,12 @@ type Router struct {
 }
 
 func NewRouter() *Router {
-	return &Router{m: make(map[MessageType]Handler)}
+	m := map[MessageType]Handler{
+		ErrorMsg: &BasicHandler{},
+		HeartBeatMsg: NewHeartBeatHandler(),
+		OriginalMsg: &BasicHandler{},
+	}
+	return &Router{m: m}
 }
 
 func (r *Router) Do(req *Request) error {
@@ -26,5 +31,8 @@ func (r *Router) Do(req *Request) error {
 }
 
 func (r *Router) AddRouter(t MessageType, handler Handler) {
+	if t == ErrorMsg || t == HeartBeatMsg || t == OriginalMsg {
+		panic("the type you define is the same as the system type (error, heartbeat, original)")
+	}
 	r.m[t] = handler
 }

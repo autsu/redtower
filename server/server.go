@@ -9,7 +9,7 @@ import (
 )
 
 type Server interface {
-	Start(context.Context)
+	//Start(context.Context)
 	Stop(context.Context)
 	Server(context.Context)
 	ConnManage() *ConnManage
@@ -35,12 +35,12 @@ func NewTCPServer(host, port, name string) *TCPServer {
 		manage: NewConnManage(),
 	}
 	// 默认在路由中添加心跳处理函数
-	t.AddHandler(HeartBeatMsg, NewHeartBeatHandler())
+	//t.AddHandler(HeartBeatMsg, NewHeartBeatHandler())
 
 	return t
 }
 
-func (t *TCPServer) Start(ctx context.Context) {
+func (t *TCPServer) start(ctx context.Context) {
 	addr := t.host + ":" + t.port
 	log.Printf("server[name: %v] start in %v... \n", t.Name, addr)
 
@@ -61,9 +61,8 @@ func (t *TCPServer) Start(ctx context.Context) {
 		id uint64 = 1
 	)
 
-	// 开启任务池
-	t.pool = NewPool(conf.DefaultGoroutineMaxNum, t.router)
-	t.pool.StartWorkerPool(ctx)
+	// 进行初始化工作
+	t.init(ctx)
 
 	for {
 		conn, err := listen.AcceptTCP()
@@ -72,43 +71,29 @@ func (t *TCPServer) Start(ctx context.Context) {
 			continue
 		}
 
+		tcpConn := NewTCPConn(conn, t)
+		log.Printf("a new conn, remote addr: [%v]\n", tcpConn.socketConn.RemoteAddr())
+
 		if t.manage.Len() > conf.MaxConnNum {
-			conn.Write([]byte("Your connection request was rejected"))
+			tcpConn.Send(NewMessage([]byte("Your connection request was rejected"), ErrorMsg))
+			//conn.Write([]byte("Your connection request was rejected"))
 			log.Printf("new conn[%v] was rejected\n", conn.RemoteAddr())
 		}
-
-		tcpConn := NewTCPConn(conn, t)
-		log.Printf("a new conn, remote addr: [%v]\n", tcpConn.Conn().RemoteAddr())
 
 		id++
 		t.manage.Add(tcpConn) // 将连接添加到 connManage
 
-		// 开启心跳检测
-		heartBeat := NewHeartBeat(tcpConn)
-		go heartBeat.Start()
-
-		go func() {
-			defer func() {
-				tcpConn.Stop()
-				tcpConn.SetIsClose(true)
-				// 从 connManage 中移除
-				t.manage.Remove(tcpConn)
-				log.Printf("conn [id = %v, addr = %v] close\n",
-					tcpConn.id, tcpConn.RemoteAddr())
-			}()
-
-			for {
-				if err := tcpConn.Handler(); err != nil {
-					log.Println(err)
-					break // EOF 会 break
-				}
-				if tcpConn.IsClose() {
-					break
-				}
-			}
-		}()
+		go tcpConn.Handler()
 	}
+}
 
+func (t *TCPServer) init(ctx context.Context) {
+	// 将心跳消息添加到路由
+	//t.AddHandler(HeartBeatMsg, NewHeartBeatHandler())
+
+	// 开启任务池
+	t.pool = NewPool(conf.DefaultGoroutineMaxNum, t.router)
+	t.pool.StartWorkerPool(ctx)
 }
 
 func (t *TCPServer) Stop(ctx context.Context) {
@@ -116,7 +101,7 @@ func (t *TCPServer) Stop(ctx context.Context) {
 }
 
 func (t *TCPServer) Server(ctx context.Context) {
-	t.Start(ctx)
+	t.start(ctx)
 }
 
 func (t *TCPServer) ConnManage() *ConnManage {

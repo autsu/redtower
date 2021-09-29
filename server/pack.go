@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"io"
 	"log"
 )
 
@@ -84,5 +85,22 @@ func (d *DataPack) UnPack(pkg []byte) (*Message, error) {
 	return &m, nil
 }
 
+func (d *DataPack) UnPackFromConn(conn Conn) (*Message, error) {
+	head := make([]byte, d.HeadSize())
+
+	_, err := io.ReadFull(conn.SocketConn(), head)
+	if err != nil {
+		log.Println("read head error: ", err)
+		return nil, err
+	}
+
+	body, err := d.UnPack(head)
+	if err != nil {
+		log.Println("unpack error: ", err)
+		return nil, err
+	}
+
+	return body, nil
+}
 
 
