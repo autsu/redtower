@@ -1,0 +1,69 @@
+package test
+
+import (
+	"context"
+	"log"
+	"strconv"
+	"testing"
+	"zinx/client"
+	"zinx/server"
+)
+
+func init() {
+	log.SetFlags(log.Lshortfile)
+}
+
+var useless = `[
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+sadsadddddddddddddaskljdlijasidjodijaldjasddddddddddddddddddddadadadadadadadadadda
+]
+`
+
+func TestServer929(t *testing.T) {
+	s := server.NewTCPServer("localhost", "8080", "1")
+	s.Server(context.Background())
+}
+
+func TestClient929(t *testing.T) {
+	cli, err := client.
+		NewClientWithTCP("localhost", "8080").
+		Init(context.Background())
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	for i := 0; i < 100; i++ {
+		si := strconv.Itoa(i)
+
+		_, err := cli.Send(
+			server.NewMessage([]byte(si+"is come back [done]"+useless),
+				server.OriginalMsg))
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+}

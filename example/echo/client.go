@@ -5,20 +5,24 @@ import (
 	"log"
 	"time"
 	"zinx/client"
+	"zinx/example"
 	"zinx/server"
 )
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Ltime)
 	ctx := context.Background()
-	cli := client.NewClientWithTCP(ctx, "localhost", "8080")
+	cli, err := client.NewClientWithTCP("localhost", "8080").Init(ctx)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	msgs := []string{"666", "456", "789", "999", "zxzxz", "12435", "dsfsd"}
 
 	for i := 0; i < len(msgs); i++ {
-		msg := server.NewMessage([]byte(msgs[i]), server.EchoMsg)
-		n, err := cli.Send(msg)
-		log.Printf("send %d bytes", n)
+		msg := server.NewMessage([]byte(msgs[i]), example.EchoMsg)
+		_, err := cli.Send(msg)
+		//log.Printf("send %d bytes", n)
 		if err != nil {
 			log.Println("send error: ", err)
 			continue

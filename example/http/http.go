@@ -5,14 +5,20 @@ import (
 	"fmt"
 	"log"
 	"zinx/client"
+	"zinx/example"
 	"zinx/server"
 )
 
 func main() {
 	ctx := context.Background()
-	conn := client.NewClientWithTCP(ctx, "localhost", "8080")
-	// 发送心跳包
-	// conn.StartHeartbeat(context.Background())
+	conn, err := client.
+		NewClientWithTCP("localhost", "8080").
+		Init(ctx)
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 
 	data := `POST /?123=456 HTTP/1.1
 
@@ -24,10 +30,10 @@ Accept-Encoding: gzip, deflate, br
 Connection: keep-alive
 Content-Length: 0`
 
-	msg := server.NewMessage([]byte(data), server.HTTPMsg)
+	msg := server.NewMessage([]byte(data), example.HTTPMsg)
 	conn.Send(msg)
 
-	msg, err := conn.Receive()
+	msg, err = conn.Receive()
 	if err != nil {
 		log.Println(err)
 		return

@@ -75,7 +75,7 @@ func TestPackClient(t *testing.T) {
 	var data []byte
 	data = ([]byte)("123")
 
-	msg := server.NewMessage(data, server.TextMsg)
+	msg := server.NewMessage(data, server.OriginalMsg)
 	log.Println(msg.DataLen())
 
 	pack := server.NewDataPack()

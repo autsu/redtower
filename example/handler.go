@@ -1,13 +1,16 @@
-package main
+package example
 
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"log"
 	"net/http"
-	_ "net/http/pprof"
 	"zinx/server"
+)
+
+const (
+	EchoMsg = iota
+	HTTPMsg
 )
 
 // EchoHandler 自己实现 Echo message 的处理函数
@@ -46,7 +49,7 @@ func (h *HttpEchoPostFormHandler) Handle(req *server.Request) {
 	r, err := http.ReadRequest(br)
 	if err != nil {
 		log.Println(err)
-		msg := server.NewMessage([]byte(err.Error()), server.ErrorMsg)
+		msg := server.NewErrorMessage([]byte(err.Error()))
 		req.Conn().Send(msg)
 		return
 	}
@@ -54,30 +57,6 @@ func (h *HttpEchoPostFormHandler) Handle(req *server.Request) {
 
 	r.ParseForm()
 	form := r.Form.Encode()
-	msg := server.NewMessage([]byte(form), server.HTTPMsg)
+	msg := server.NewMessage([]byte(form), HTTPMsg)
 	req.Conn().Send(msg)
-}
-
-func init() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Ltime)
-}
-
-func main() {
-	// pprof
-	go func() {
-		http.ListenAndServe("0.0.0.0:6060", nil)
-	}()
-
-	s := server.NewTCPServer("localhost", "8080", "server1")
-	s.AddHandler(server.EchoMsg, NewEchoHandler())
-	s.AddHandler(server.HeartBeatMsg, server.NewHeartBeatHandler())
-	s.AddHandler(server.HTTPMsg, NewHttpEchoPostFormHandler())
-
-	//go func() {
-	//	// 开启监控
-	//	monitor := server.NewMonitor(s)
-	//	monitor.Start(os.Stdout, time.Second * 10)
-	//}()
-
-	s.Start(context.Background())
 }
