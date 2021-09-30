@@ -1,4 +1,4 @@
-module zinx
+module github.com/zengh1/redtower
 
 go 1.16
 
