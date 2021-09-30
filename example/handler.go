@@ -3,9 +3,9 @@ package example
 import (
 	"bufio"
 	"bytes"
+	"github.com/zengh1/redtower/server"
 	"log"
 	"net/http"
-	"zinx/server"
 )
 
 const (

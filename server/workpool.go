@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"log"
-	"zinx/conf"
+	"github.com/zengh1/redtower/conf"
 )
 
 // +-----+-----+-----+

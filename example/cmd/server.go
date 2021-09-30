@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
+	"github.com/zengh1/redtower/example"
+	"github.com/zengh1/redtower/server"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
-	"zinx/example"
-	"zinx/server"
 )
 
 func init() {

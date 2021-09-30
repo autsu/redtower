@@ -3,7 +3,7 @@ package server
 import (
 	"log"
 	"time"
-	"zinx/conf"
+	"github.com/zengh1/redtower/conf"
 )
 
 type HeartBeat struct {

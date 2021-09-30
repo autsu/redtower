@@ -5,7 +5,7 @@ import (
 	reuseport "github.com/kavu/go_reuseport"
 	"log"
 	"net"
-	"zinx/conf"
+	"github.com/zengh1/redtower/conf"
 )
 
 type Server interface {

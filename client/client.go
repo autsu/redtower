@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/zengh1/redtower/conf"
+	"github.com/zengh1/redtower/server"
 	"log"
 	"net"
 	"time"
-	"zinx/conf"
-	"zinx/server"
 )
 
 type Client struct {

@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
+	"github.com/zengh1/redtower/client"
+	"github.com/zengh1/redtower/example"
+	"github.com/zengh1/redtower/server"
 	"log"
 	"time"
-	"zinx/client"
-	"zinx/example"
-	"zinx/server"
 )
 
 func main() {
