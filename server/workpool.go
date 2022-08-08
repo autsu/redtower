@@ -2,8 +2,8 @@ package server
 
 import (
 	"context"
+	"github.com/youseebiggirl/redtower/conf"
 	"log"
-	"github.com/zengh1/redtower/conf"
 )
 
 // +-----+-----+-----+
@@ -37,7 +37,6 @@ func NewPool(size uint64, r *Router) *Pool {
 // AddWork 添加任务到任务队列，这里使用了轮询负载均衡，保证每个任务队列的任务数平均
 func (p *Pool) AddWork(r *Request) {
 	index := r.Conn().ConnID() % p.Size
-
 	p.WorkQueue[index] <- r
 }
 

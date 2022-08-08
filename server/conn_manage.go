@@ -9,7 +9,7 @@ import (
 
 type ConnManage struct {
 	conns map[uint64]Conn
-	mu sync.RWMutex
+	mu    sync.RWMutex
 }
 
 func NewConnManage() *ConnManage {
@@ -26,7 +26,7 @@ func (c *ConnManage) Add(conn Conn) {
 
 	log.Printf("conn[id = %d, addr = %s] add to manage\n",
 		conn.ConnID(), conn.RemoteAddr().String())
-	log.Printf("cur conn manage info: %v\n", c.String())
+	//log.Printf("cur conn manage info: %v\n", c.String())
 }
 
 func (c *ConnManage) Remove(conn Conn) {

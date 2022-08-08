@@ -45,7 +45,6 @@ func NewTCPConn(conn *net.TCPConn, server *TCPServer) *TCPConn {
 	}
 	// global conn id + 1
 	for !atomic.CompareAndSwapUint64(&connId, connId, connId+1) {
-
 	}
 
 	return t
@@ -165,7 +164,6 @@ func (t *TCPConn) Handler() {
 
 	for {
 		if err := handlerConn(t); err != nil {
-			log.Println(err)
 			bmsg := []byte(err.Error())
 			t.Send(NewErrorMessage(bmsg))
 			break // EOF 会 break
@@ -185,8 +183,8 @@ func handlerConn(conn Conn) error {
 	}
 
 	msgType := recvData.Type()
-	log.Printf("recvData: data: %v, type: %v, size: %v bytes \n",
-		string(recvData.Data()), msgType, len(recvData.Data()))
+	//log.Printf("recvData: data: %v, type: %v, size: %v bytes \n",
+	//	string(recvData.Data()), msgType, len(recvData.Data()))
 
 	msg := NewMessage(recvData.Data(), msgType)
 	req := NewRequest(msg, conn)

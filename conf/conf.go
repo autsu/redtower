@@ -9,4 +9,5 @@ const (
 	MaxConnNum             = 1000             // 最大连接数量
 	DefaultQueueSize       = 10               // 队列的默认任务数
 	DefaultGoroutineMaxNum = 500              // workpool 默认启动的最大 goroutine 数量
+	MaxPackSize            = 65535
 )

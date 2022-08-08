@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/zengh1/redtower/conf"
-	"github.com/zengh1/redtower/server"
+	"github.com/youseebiggirl/redtower/conf"
+	"github.com/youseebiggirl/redtower/server"
 	"log"
 	"net"
 	"time"
@@ -13,9 +13,8 @@ import (
 
 type Client struct {
 	conn server.Conn
-	err  error	// 将错误保存至此，以实现链式调用
+	err  error // 将错误保存至此，以实现链式调用
 }
-
 
 func NewClientWithTCP(host, port string) *Client {
 	c := &Client{}
@@ -57,7 +56,6 @@ func (c *Client) Receive() (*server.Message, error) {
 	}
 	return receive, nil
 }
-
 
 // startHeartbeat 发送心跳包给服务端
 func startHeartbeat(conn server.Conn, ctx context.Context) {

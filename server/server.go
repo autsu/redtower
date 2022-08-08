@@ -3,9 +3,9 @@ package server
 import (
 	"context"
 	reuseport "github.com/kavu/go_reuseport"
+	"github.com/youseebiggirl/redtower/conf"
 	"log"
 	"net"
-	"github.com/zengh1/redtower/conf"
 )
 
 type Server interface {
@@ -15,6 +15,7 @@ type Server interface {
 	ConnManage() *ConnManage
 	AddHandler(MessageType, Handler)
 	Pool() *Pool
+	Router() *Router
 }
 
 type TCPServer struct {
@@ -112,5 +113,9 @@ func (t *TCPServer) Pool() *Pool {
 }
 
 func (t *TCPServer) AddHandler(typ MessageType, handler Handler) {
-	t.router.AddRouter(typ, handler)
+	t.router.Add(typ, handler)
+}
+
+func (t *TCPServer) Router() *Router {
+	return t.router
 }

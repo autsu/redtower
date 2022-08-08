@@ -1,13 +1,7 @@
-package example
-
-import (
-	"bufio"
-	"bytes"
-	"github.com/youseebiggirl/redtower/server"
-	"log"
-	"net/http"
-)
-
+# Example:
+(View the `example` folder in detail)
+## Server
+```go
 var (
 	EchoMsg = server.GenMsgTyp("echo")
 	HTTPMsg = server.GenMsgTyp("HTTP")
@@ -52,3 +46,39 @@ func (h *HttpEchoPostFormHandler) Handle(req *server.Request) {
 	msg := server.NewMessage([]byte(form), HTTPMsg)
 	req.Conn().Send(msg)
 }
+```
+
+## client
+### HTTP
+```go
+func main() {
+	ctx := context.Background()
+	conn, err := client.
+		NewClientWithTCP("localhost", "8080").
+		Init(ctx)
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	data := `POST /?123=456 HTTP/1.1
+
+User-Agent: PostmanRuntime/7.28.1
+Accept: */*
+Postman-Token: e1e457b7-d713-443d-8022-04a2d1d9697a
+Host: 127.0.0.1:8080
+Accept-Encoding: gzip, deflate, br
+Connection: keep-alive
+Content-Length: 0`
+
+	msg := server.NewMessage([]byte(data), example.HTTPMsg)
+	conn.Send(msg)
+
+	msg, err = conn.Receive()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Println(string(msg.Data()))
+}
+```

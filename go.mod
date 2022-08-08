@@ -1,6 +1,6 @@
-module github.com/zengh1/redtower
+module github.com/youseebiggirl/redtower
 
-go 1.16
+go 1.18
 
 require (
 	github.com/kavu/go_reuseport v1.5.0

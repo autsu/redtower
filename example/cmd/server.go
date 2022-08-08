@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"github.com/zengh1/redtower/example"
-	"github.com/zengh1/redtower/server"
+	"github.com/youseebiggirl/redtower/example"
+	"github.com/youseebiggirl/redtower/server"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -20,9 +20,9 @@ func main() {
 	}()
 
 	s := server.NewTCPServer("localhost", "8080", "server1")
-	s.AddHandler(example.EchoMsg, example.NewEchoHandler())
-	//s.AddHandler(server.HeartBeatMsg, server.NewHeartBeatHandler())
-	s.AddHandler(example.HTTPMsg, example.NewHttpEchoPostFormHandler())
+	s.AddHandler(example.EchoMsg, &example.EchoHandler{})
+	s.AddHandler(example.HTTPMsg, &example.HttpEchoPostFormHandler{})
+	server.Debug.PrintTypMap(s.Router())
 
 	//go func() {
 	//	// 开启监控

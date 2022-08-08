@@ -1,9 +1,9 @@
 package server
 
 import (
+	"github.com/youseebiggirl/redtower/conf"
 	"log"
 	"time"
-	"github.com/zengh1/redtower/conf"
 )
 
 type HeartBeat struct {
@@ -31,5 +31,4 @@ func (h *HeartBeat) Start() {
 			log.Println("receive heartbeat from client")
 		}
 	}
-
 }

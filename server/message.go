@@ -1,38 +1,61 @@
 package server
 
-import "math"
-
-type MessageType int32
-
-const (
-	HeartBeatMsg MessageType = iota + math.MinInt32	// 防止和用户自定义类型冲突
-	ErrorMsg
-	OriginalMsg // 不进行任何处理
+import (
+	"crypto/md5"
+	"io"
+	"sync"
 )
 
-//func TypeOfMessage(msgType MessageType) string {
-//	switch msgType {
-//	case ErrorMsg:
-//		return "错误信息"
-//	case HeartBeatMsg:
-//		return "心跳信息"
-//	case OriginalMsg:
-//		return "原始信息"
-//	}
-//	return "未知种类的信息"
-//}
+// md5 到 typeName 的映射
+var md5Typ = make(map[[16]byte]string)
+var typMutex sync.Mutex
+
+type MessageType interface {
+	ID() [16]byte
+}
+
+// 没有什么用处，仅用于 GenMsgTyp 的返回
+type __xxx__ struct {
+	// 用作 typ 的唯一标识，使用 md5 生成，因为使用 binary 传输，不允许变长类型，
+	// 所以这里定义的是一个 [16]byte，这符合 md5 的固定长度。
+	// typ 需要添加到 router 的 handler map 中，所以需要唯一标识
+	X [16]byte
+}
+
+func (x __xxx__) ID() [16]byte {
+	return x.X
+}
+
+func GenMsgTyp(typName string) MessageType {
+	h := md5.New()
+	io.WriteString(h, typName)
+	r := h.Sum(nil)
+	v := *(*[16]byte)(r)
+
+	typMutex.Lock()
+	md5Typ[v] = typName
+	typMutex.Unlock()
+
+	return __xxx__{X: v}
+}
+
+var (
+	HeartBeatMsg = GenMsgTyp("heartbeat")
+	ErrorMsg     = GenMsgTyp("error")
+	OriginalMsg  = GenMsgTyp("original")
+)
 
 type Message struct {
 	dataLen uint32
 	data    []byte
-	type_   MessageType
+	typ     MessageType
 }
 
-func NewMessage(data []byte, type_ MessageType) *Message {
+func NewMessage(data []byte, typ MessageType) *Message {
 	return &Message{
 		dataLen: (uint32)(len(data)),
 		data:    data,
-		type_:   type_,
+		typ:     typ,
 	}
 }
 
@@ -40,7 +63,7 @@ func NewErrorMessage(data []byte) *Message {
 	return &Message{
 		dataLen: (uint32)(len(data)),
 		data:    data,
-		type_:   ErrorMsg,
+		typ:     ErrorMsg,
 	}
 }
 
@@ -53,7 +76,7 @@ func (m *Message) Data() []byte {
 }
 
 func (m *Message) Type() MessageType {
-	return m.type_
+	return m.typ
 }
 
 func (m *Message) SetDataLen(len uint32) {
@@ -65,5 +88,5 @@ func (m *Message) SetData(data []byte) {
 }
 
 func (m *Message) SetType(t MessageType) {
-	m.type_ = t
+	m.typ = t
 }

@@ -2,9 +2,8 @@ package main
 
 import (
 	"context"
-	"github.com/zengh1/redtower/client"
-	"github.com/zengh1/redtower/example"
-	"github.com/zengh1/redtower/server"
+	"github.com/youseebiggirl/redtower/client"
+	"github.com/youseebiggirl/redtower/server"
 	"log"
 	"time"
 )
@@ -20,7 +19,7 @@ func main() {
 	msgs := []string{"666", "456", "789", "999", "zxzxz", "12435", "dsfsd"}
 
 	for i := 0; i < len(msgs); i++ {
-		msg := server.NewMessage([]byte(msgs[i]), example.EchoMsg)
+		msg := server.NewMessage([]byte(msgs[i]), server.GenMsgTyp("echo"))
 		_, err := cli.Send(msg)
 		//log.Printf("send %d bytes", n)
 		if err != nil {
