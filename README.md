@@ -1,3 +1,6 @@
+# UML
+![](https://github.com/autsu/redtower/blob/master/doc/uml.svg)
+
 # Example:
 (View the `example` folder in detail)
 ## Server

@@ -2,8 +2,8 @@ package server
 
 import (
 	"context"
+	"github.com/autsu/redtower/conf"
 	reuseport "github.com/kavu/go_reuseport"
-	"github.com/youseebiggirl/redtower/conf"
 	"log"
 	"net"
 )

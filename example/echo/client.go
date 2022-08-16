@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"github.com/youseebiggirl/redtower/client"
-	"github.com/youseebiggirl/redtower/server"
+	"github.com/autsu/redtower/client"
+	"github.com/autsu/redtower/server"
 	"log"
 	"time"
 )

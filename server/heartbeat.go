@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/youseebiggirl/redtower/conf"
+	"github.com/autsu/redtower/conf"
 	"log"
 	"time"
 )

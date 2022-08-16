@@ -3,7 +3,7 @@ package example
 import (
 	"bufio"
 	"bytes"
-	"github.com/youseebiggirl/redtower/server"
+	"github.com/autsu/redtower/server"
 	"log"
 	"net/http"
 )

@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"github.com/youseebiggirl/redtower/example"
-	"github.com/youseebiggirl/redtower/server"
+	"github.com/autsu/redtower/example"
+	"github.com/autsu/redtower/server"
 	"log"
 	"net/http"
 	_ "net/http/pprof"

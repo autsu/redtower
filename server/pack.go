@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"github.com/youseebiggirl/redtower/conf"
+	"github.com/autsu/redtower/conf"
 	"io"
 	"log"
 	"unsafe"

@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"github.com/youseebiggirl/redtower/conf"
+	"github.com/autsu/redtower/conf"
 	"log"
 )
 
