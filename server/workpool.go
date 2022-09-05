@@ -21,16 +21,16 @@ import (
 
 // Pool 一个队列对应一个 goroutine，goroutine 不断从队列中取出任务并执行
 type Pool struct {
-	Size      uint64          // 最大的 goroutine 数量
-	WorkQueue []chan *Request // 任务队列，队列中存储多个请求
-	R         *Router
+	Size          uint64          // 最大的 goroutine 数量
+	WorkQueue     []chan *Request // 任务队列，队列中存储多个请求
+	onRequestFunc func(*Request) error
 }
 
-func NewPool(size uint64, r *Router) *Pool {
+func newPool(size uint64, onRequest func(*Request) error) *Pool {
 	return &Pool{
-		Size:      size,
-		WorkQueue: make([]chan *Request, size),
-		R:         r,
+		Size:          size,
+		WorkQueue:     make([]chan *Request, size),
+		onRequestFunc: onRequest,
 	}
 }
 
@@ -42,7 +42,7 @@ func (p *Pool) AddWork(r *Request) {
 
 func (p *Pool) StartWorkerPool(ctx context.Context) {
 	for i := 0; i < int(p.Size); i++ {
-		p.WorkQueue[i] = make(chan *Request, conf.DefaultQueueSize)
+		p.WorkQueue[i] = make(chan *Request, conf.GlobalConf.WorkPoolQueueSize)
 		go func(i int) {
 			p.doWork(ctx, p.WorkQueue[i])
 		}(i)
@@ -53,10 +53,9 @@ func (p *Pool) doWork(ctx context.Context, c chan *Request) {
 	for {
 		select {
 		case req := <-c:
-			if err := p.R.Do(req); err != nil {
+			if err := p.onRequestFunc(req); err != nil {
 				log.Printf("handler conn[id=%d], addr=%s error: %v \n",
-					req.Conn().ConnID(), req.Conn().RemoteAddr(), err)
-
+					req.Conn().ConnID(), req.Conn().Addr(), err)
 				msg := NewMessage([]byte(err.Error()), ErrorMsg)
 				// 向连接发送错误信息
 				req.Conn().Send(msg)

@@ -2,36 +2,42 @@
 ![](https://github.com/autsu/redtower/blob/master/doc/uml.svg)
 
 # Example:
-(View the `example` folder in detail)
-## Server
+
+(在 `example` 文件夹中查看更多示例，testdata 中演示了一个粘包/拆包处理效果的 demo)
+## Global
+
 ```go
-var (
-	EchoMsg = server.GenMsgTyp("echo")
-	HTTPMsg = server.GenMsgTyp("HTTP")
-)
+// 自定义消息类型，需要保证不与库的内置消息类型（ErrorMsg = -1 和 HearbeatMsg = -2 ）的值相同
+const HTTPMsg = 10	
+const EchoMsg = 11
+```
 
-// EchoHandler 自己实现 Echo message 的处理函数
-type EchoHandler struct {
-	server.BasicHandler
-}
 
-func (e *EchoHandler) Handle(r *server.Request) {
-	data := r.Data()
 
-	msg := server.NewMessage(data, r.MsgType())
-	_, err := r.Conn().Send(msg)
-	if err != nil {
-		log.Println(err)
-		return
+## Server
+
+```go
+func main() {
+	s := server.NewTCPServer("localhost", "7788", "test1",
+		func(req *server.Request) error {
+			typ := req.MsgType()
+			switch typ {
+			case example.HTTPMsg:
+				handleHTTP(req)
+			case server.ErrorMsg:
+				log.Printf("error: %v\n", string(req.Data()))
+			default:
+				log.Println("Unknown msg typ")
+				log.Println(req.Data())
+			}
+			return nil
+		})
+	if err := s.Run(context.Background()); err != nil {
+		panic(err)
 	}
 }
 
-// HttpEchoPostFormHandler 回显 post 表单数据（该 handler 仅仅是用来测试 http 请求）
-type HttpEchoPostFormHandler struct {
-	server.BasicHandler
-}
-
-func (h *HttpEchoPostFormHandler) Handle(req *server.Request) {
+func handleHTTP(req *server.Request) {
 	bsr := bytes.NewReader(req.Data())
 	br := bufio.NewReader(bsr)
 
@@ -46,7 +52,7 @@ func (h *HttpEchoPostFormHandler) Handle(req *server.Request) {
 
 	r.ParseForm()
 	form := r.Form.Encode()
-	msg := server.NewMessage([]byte(form), HTTPMsg)
+	msg := server.NewMessage([]byte(form), example.HTTPMsg)
 	req.Conn().Send(msg)
 }
 ```
@@ -57,12 +63,12 @@ func (h *HttpEchoPostFormHandler) Handle(req *server.Request) {
 func main() {
 	ctx := context.Background()
 	conn, err := client.
-		NewClientWithTCP("localhost", "8080").
+		NewClientWithTCP("localhost", "7788").
 		Init(ctx)
-
 	if err != nil {
 		log.Fatalln(err)
 	}
+	defer conn.Close()
 
 	data := `POST /?123=456 HTTP/1.1
 

@@ -1,66 +1,82 @@
 package server
 
 import (
-	"fmt"
-	"log"
-	"strings"
+	"github.com/autsu/redtower/logs"
 	"sync"
 )
 
+var GlobalConnManage = newConnManage()
+
 type ConnManage struct {
-	conns map[uint64]Conn
+	// k: string，存储 server
+	// v: map，存储某个 server 下的所有 connection
+	conns map[string]map[uint64]Conn
 	mu    sync.RWMutex
 }
 
-func NewConnManage() *ConnManage {
+func newConnManage() *ConnManage {
 	return &ConnManage{
-		conns: make(map[uint64]Conn),
-		mu:    sync.RWMutex{},
+		conns: make(map[string]map[uint64]Conn),
 	}
 }
 
-func (c *ConnManage) Add(conn Conn) {
+func (c *ConnManage) Add(serverName string, conn Conn) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.conns[conn.ConnID()] = conn
-
-	log.Printf("conn[id = %d, addr = %s] add to manage\n",
-		conn.ConnID(), conn.RemoteAddr().String())
-	//log.Printf("cur conn manage info: %v\n", c.String())
-}
-
-func (c *ConnManage) Remove(conn Conn) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	delete(c.conns, conn.ConnID())
-
-	log.Printf("conn[id = %v, addr = %v] remove from manage\n",
-		conn.ConnID(), conn.RemoteAddr())
-}
-
-func (c *ConnManage) GetConnById(connId uint64) Conn {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.conns[connId]
-}
-
-func (c *ConnManage) All() map[uint64]Conn {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.conns
-}
-
-func (c *ConnManage) Len() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return len(c.conns)
-}
-
-func (c *ConnManage) String() string {
-	var sb strings.Builder
-	for id, conn := range c.conns {
-		info := fmt.Sprintf("conn[id = %d] addr: %v\n", id, conn.RemoteAddr().String())
-		sb.WriteString(info)
+	_, ok := c.conns[serverName]
+	if !ok {
+		c.conns[serverName] = make(map[uint64]Conn)
 	}
-	return sb.String()
+	c.conns[serverName][conn.ConnID()] = conn
+
+	logs.L.Printf_IfOpenDebug("conn[id=%v, addr=%v] add to manage[server=%v]\n",
+		conn.ConnID(), conn.Addr().String(), serverName)
+}
+
+func (c *ConnManage) RemoveAndClose(serverName string, conn Conn) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.conns[serverName], conn.ConnID())
+	if conn != nil {
+		conn.Close()
+		logs.L.Printf_IfOpenDebug("conn[id=%v, addr=%v] remove from manage[server=%v]\n",
+			conn.ConnID(), conn.Addr().String(), serverName)
+	}
+}
+
+func (c *ConnManage) GetConn(serverName string, connId uint64) (conn Conn, ok bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	conn, ok = c.conns[serverName][connId]
+	return
+}
+
+func (c *ConnManage) GetServerAllConn(serverName string) map[uint64]Conn {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.conns[serverName]
+}
+
+func (c *ConnManage) Nums() uint64 {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return (uint64)(len(c.conns))
+}
+
+func (c *ConnManage) NumsFromServer(serverName string) uint64 {
+	return (uint64)(len(c.conns[serverName]))
+}
+
+func (c *ConnManage) ClearAll() {
+	for _, conn := range c.conns {
+		for _, c := range conn {
+			c.Close()
+		}
+	}
+}
+
+func (c *ConnManage) ClearFromServer(serverName string) {
+	for _, conn := range c.conns[serverName] {
+		conn.Close()
+	}
 }

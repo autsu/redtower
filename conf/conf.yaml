@@ -1,0 +1,7 @@
+MaxConnNum: 1000
+MaxPackageSize: 65535
+GoroutineMaxNum: 1000
+WorkPoolQueueSize: 100
+HeartBeatSendingInterval: 10
+HeartBeatDeadline: 30
+OpenDebug: false

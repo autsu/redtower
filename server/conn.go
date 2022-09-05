@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"github.com/autsu/redtower/logs"
 	"io"
 	"log"
 	"net"
@@ -9,23 +10,17 @@ import (
 )
 
 type Conn interface {
-	Server() Server
-	SocketConn() net.Conn // 原始的 net.conn
-	RemoteAddr() net.Addr
+	Addr() net.Addr
 	ConnID() uint64
-	IsClose() bool
-	HeartBeatChan() chan struct{}
-
-	SetIsClose(bool)
 
 	Send(data *Message) (int, error) // 发送数据到 conn
 	Receive() (*Message, error)      // 从 conn 中接收数据
-	Handler()                        // 处理 conn 中的数据
-	Stop()                           // 关闭连接
+	Handle()                         // 处理 conn 中的数据
+	Close()                          // 关闭连接
 }
 
 // 每创建一条 conn，便从这里取得一个新的 connId，之后 connId++（原子的）
-var connId uint64 = 1
+var connId atomic.Uint64
 
 type TCPConn struct {
 	server        *TCPServer // 该连接所属的 server
@@ -39,34 +34,24 @@ func NewTCPConn(conn *net.TCPConn, server *TCPServer) *TCPConn {
 	t := &TCPConn{
 		server:        server,
 		socketConn:    conn,
-		id:            atomic.LoadUint64(&connId),
+		id:            connId.Load(),
 		isClose:       false,
 		heartbeatChan: make(chan struct{}),
 	}
 	// global conn id + 1
-	for !atomic.CompareAndSwapUint64(&connId, connId, connId+1) {
-	}
-
+	connId.Add(1)
 	return t
 }
 
-func (t *TCPConn) Stop() {
+func (t *TCPConn) Close() {
 	if t.isClose {
 		return
 	}
 	t.isClose = true
-	t.socketConn.Close()
+	GlobalConnManage.RemoveAndClose(t.server.Name, t)
 }
 
-func (t *TCPConn) Server() Server {
-	return t.server
-}
-
-func (t *TCPConn) SocketConn() net.Conn {
-	return t.socketConn
-}
-
-func (t *TCPConn) RemoteAddr() net.Addr {
+func (t *TCPConn) Addr() net.Addr {
 	return t.socketConn.RemoteAddr()
 }
 
@@ -75,19 +60,18 @@ func (t *TCPConn) ConnID() uint64 {
 }
 
 func (t *TCPConn) Send(data *Message) (int, error) {
-	log.Printf("seng to %v ...", t.RemoteAddr().String())
+	logs.L.Printf_IfOpenDebug("seng to %v ...\n", t.Addr())
 	if t.isClose {
 		return 0, errors.New("read error: the connection is close")
 	}
 
 	pack := NewDataPack()
-
 	packmsg, err := pack.Packet(data)
 	if err != nil {
 		return 0, err
 	}
 
-	n, err := t.SocketConn().Write(packmsg)
+	n, err := t.socketConn.Write(packmsg)
 	if err != nil {
 		return 0, err
 	}
@@ -96,19 +80,19 @@ func (t *TCPConn) Send(data *Message) (int, error) {
 }
 
 func (t *TCPConn) Receive() (*Message, error) {
-	log.Printf("receive from %v ...", t.RemoteAddr().String())
+	logs.L.Printf_IfOpenDebug("receive from %v ...\n", t.Addr())
 	if t.isClose {
 		return nil, errors.New("read error: the connection is close")
 	}
 
 	pack := NewDataPack()
-	msg, err := pack.UnPackFromConn(t)
+	header, err := t.UnpackHeader(pack)
 	if err != nil {
 		return nil, err
 	}
 
-	dataLen := msg.DataLen()
-	msgType := msg.Type()
+	dataLen := header.dataLen
+	msgType := header.typ
 
 	// 虽然协议中记录了消息的长度，但是 tcp 传输时可能会发生截断，导致读取不完整，比如
 	// 记录的长度是 100，但是因为某些原因（流量控制、拥塞控制）导致 tcp 只发送了长度 80
@@ -129,12 +113,17 @@ func (t *TCPConn) Receive() (*Message, error) {
 		buf := make([]byte, needN)
 		// 必须读满 len(buf)，否则返回一个 err
 		n, err := io.ReadFull(t.socketConn, buf)
+
 		// 没有读满 buf
-		if err != nil && err != io.EOF {
-			log.Println("read data error: ", err)
+		if err != nil {
+			// 虽然没读满，但是返回了 EOF 错误，说明没有数据可读了，可能是对方已经断开了连接，
+			// 此时就不需要再尝试读取了
+			if err == io.EOF {
+				return nil, err
+			}
 			// 将当前读的这部分添加到 tmp 中，暂时保存
 			tmpBuf = append(tmpBuf, buf[:n]...)
-			needN -= uint32(n) // 更新 needN 的值
+			needN -= uint64(n) // 更新 needN 的值
 			readN += int64(n)
 			continue
 		}
@@ -150,37 +139,61 @@ func (t *TCPConn) Receive() (*Message, error) {
 	return m, nil
 }
 
-func (t *TCPConn) Handler() {
-	defer func() {
-		t.Stop()
-		t.SetIsClose(true)
-		t.Server().ConnManage().Remove(t) // 从该连接从当前 server 的 connManage 中移除
-		log.Printf("conn [id = %v, addr = %v] close\n", t.id, t.RemoteAddr())
-	}()
+func (t *TCPConn) UnpackHeader(d *DataPack) (*Message, error) {
+	head := make([]byte, d.HeadSize())
 
+	_, err := io.ReadFull(t.socketConn, head)
+	if err != nil {
+		if err != io.EOF {
+			log.Println("read head error: ", err)
+		}
+		return nil, err
+	}
+
+	body, err := d.UnPack(head)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
+
+// Handle 处理连接中的数据，
+func (t *TCPConn) Handle() {
+	defer func() {
+		if !t.isClose {
+			t.isClose = true
+			// 从该连接从当前 server 的 connManage 中移除，并 close 该连接
+			GlobalConnManage.RemoveAndClose(t.server.Name, t)
+			logs.L.Printf_IfOpenDebug("conn [id = %v, addr = %v] close\n", t.id, t.Addr())
+		}
+	}()
 	// 开启心跳检测
-	heartBeat := NewHeartBeat(t)
+	heartBeat := NewHeartBeat(t.server.Name, t)
 	go heartBeat.Start()
+	GlobalConnManage.Add(t.server.Name, t) // 将连接添加到 connManage
 
 	for {
-		if err := handlerConn(t); err != nil {
+		if err := handleTCP(t, heartBeat); err != nil {
 			bmsg := []byte(err.Error())
 			t.Send(NewErrorMessage(bmsg))
 			break // EOF 会 break
 		}
 
-		if t.IsClose() {
+		if t.isClose {
 			break
 		}
 	}
 }
 
-func handlerConn(conn Conn) error {
+func handleTCP(conn *TCPConn, beat *HeartBeat) error {
 	recvData, err := conn.Receive()
 	if err != nil {
 		log.Println(err)
 		return err
 	}
+	// 读取到数据了，发送心跳
+	beat.trigger()
 
 	msgType := recvData.Type()
 	//log.Printf("recvData: data: %v, type: %v, size: %v bytes \n",
@@ -189,19 +202,6 @@ func handlerConn(conn Conn) error {
 	msg := NewMessage(recvData.Data(), msgType)
 	req := NewRequest(msg, conn)
 	// 添加到工作池
-	conn.Server().Pool().AddWork(req)
-
+	conn.server.pool.AddWork(req)
 	return nil
-}
-
-func (t *TCPConn) IsClose() bool {
-	return t.isClose
-}
-
-func (t *TCPConn) SetIsClose(isClose bool) {
-	t.isClose = isClose
-}
-
-func (t *TCPConn) HeartBeatChan() chan struct{} {
-	return t.heartbeatChan
 }

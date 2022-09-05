@@ -5,15 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"github.com/autsu/redtower/conf"
-	"github.com/autsu/redtower/server"
 	"log"
 	"net"
+	"sync"
 	"time"
+
+	"github.com/autsu/redtower/server"
 )
 
 type Client struct {
-	conn server.Conn
-	err  error // 将错误保存至此，以实现链式调用
+	once    sync.Once
+	conn    server.Conn
+	rawConn net.Conn
+	addr    string
+	err     error // 将错误保存至此，以实现链式调用
 }
 
 func NewClientWithTCP(host, port string) *Client {
@@ -26,6 +31,8 @@ func NewClientWithTCP(host, port string) *Client {
 		c.err = err
 		return c
 	}
+	c.addr = conn.LocalAddr().String()
+	c.rawConn = conn
 
 	tcpConn := server.NewTCPConn(conn, nil)
 	c.conn = tcpConn
@@ -33,7 +40,9 @@ func NewClientWithTCP(host, port string) *Client {
 }
 
 func (c *Client) Init(ctx context.Context) (*Client, error) {
-	go startHeartbeat(c.conn, ctx)
+	c.once.Do(func() {
+		go startHeartbeat(c.conn, ctx)
+	})
 	return c, c.err
 }
 
@@ -57,13 +66,21 @@ func (c *Client) Receive() (*server.Message, error) {
 	return receive, nil
 }
 
+func (c *Client) Close() error {
+	return c.rawConn.Close()
+}
+
+func (c *Client) Addr() string {
+	return c.addr
+}
+
 // startHeartbeat 发送心跳包给服务端
 func startHeartbeat(conn server.Conn, ctx context.Context) {
-	ticker := time.NewTicker(conf.SendHeartbeatTime)
+	ticker := time.NewTicker(time.Duration(conf.GlobalConf.HeartBeatSendingInterval) * time.Second)
 	for {
 		select {
 		case <-ticker.C:
-			heartbeat := server.NewMessage([]byte(""), server.HeartBeatMsg)
+			heartbeat := server.NewMessage([]byte(""), server.HearbeatMsg)
 			conn.Send(heartbeat)
 			log.Println("send heartbreat to server")
 		case <-ctx.Done():

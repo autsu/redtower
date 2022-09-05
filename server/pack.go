@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/autsu/redtower/conf"
-	"io"
 	"log"
 	"unsafe"
 )
@@ -32,16 +31,13 @@ func NewDataPack() *DataPack {
 }
 
 func (d *DataPack) HeadSize() uint32 {
-	// head = DataLen() + DataType()
-	// DataLen() uint32 = 4 byte
-	// DataType() interface{} = 16 byte	 ps: go 里面的接口类型大小为 16 bit
 	return (uint32)(unsafe.Sizeof(d.m.dataLen) + unsafe.Sizeof(d.m.typ))
 }
 
 func (d *DataPack) Packet(msg *Message) ([]byte, error) {
-	data := msg.Data()
-	dataLen := msg.DataLen()
-	dataType := msg.Type()
+	data := msg.data
+	dataLen := msg.dataLen
+	dataType := msg.typ
 
 	var b bytes.Buffer
 
@@ -75,38 +71,16 @@ func (d *DataPack) UnPack(pkg []byte) (*Message, error) {
 		return nil, err
 	}
 
-	// 需要先定义一个实现了 MessageType 的 struct
-	// 如果 binary.Read 第三个参数直接传 m.typ 会产生 nil pointer 异常
-	// 传 &m.typ 也会发生错误：invalid type
-	var x __xxx__
-	if err := binary.Read(r, binary.BigEndian, &x); err != nil {
+	if err := binary.Read(r, binary.BigEndian, &m.typ); err != nil {
 		log.Println("packet read dataLen error: ", err)
 		return nil, err
 	}
-	m.typ = &x
 
-	if m.dataLen > conf.MaxPackSize {
+	if m.dataLen > uint64(conf.GlobalConf.MaxPackageSize) {
 		log.Printf("unpack error: too large message, len: %v, max: %v \n",
-			m.dataLen, conf.MaxPackSize)
+			m.dataLen, conf.GlobalConf.MaxPackageSize)
 		return nil, errors.New("unpack error: too large message")
 	}
 
 	return &m, nil
-}
-
-func (d *DataPack) UnPackFromConn(conn Conn) (*Message, error) {
-	head := make([]byte, d.HeadSize())
-
-	_, err := io.ReadFull(conn.SocketConn(), head)
-	if err != nil {
-		log.Println("read head error: ", err)
-		return nil, err
-	}
-
-	body, err := d.UnPack(head)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
 }

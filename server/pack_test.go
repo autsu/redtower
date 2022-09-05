@@ -44,7 +44,7 @@ func TestPack(t *testing.T) {
 			continue
 		}
 		log.Printf("len: %v, typ: %v\n",
-			header.dataLen, md5Typ[header.typ.ID()])
+			header.dataLen, header.typ)
 
 		//fmt.Println("unpack...")
 		//time.Sleep(time.Second * 10)
@@ -72,7 +72,7 @@ func TestPackClient(t *testing.T) {
 	var data []byte
 	data = ([]byte)("123")
 
-	msg := NewMessage(data, OriginalMsg)
+	msg := NewMessage(data, MessageType(66))
 	log.Println(msg.DataLen())
 
 	pack := NewDataPack()

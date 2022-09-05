@@ -12,12 +12,12 @@ import (
 func main() {
 	ctx := context.Background()
 	conn, err := client.
-		NewClientWithTCP("localhost", "8080").
+		NewClientWithTCP("localhost", "7788").
 		Init(ctx)
-
 	if err != nil {
 		log.Fatalln(err)
 	}
+	defer conn.Close()
 
 	data := `POST /?123=456 HTTP/1.1
 

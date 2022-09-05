@@ -2,3 +2,6 @@ github.com/kavu/go_reuseport v1.5.0 h1:UNuiY2OblcqAtVDE8Gsg1kZz8zbBWg907sP1ceBV+
 github.com/kavu/go_reuseport v1.5.0/go.mod h1:CG8Ee7ceMFSMnx/xr25Vm0qXaj2Z4i5PWoUx+JZ5/CU=
 github.com/youseebiggirl/redtower v0.0.0-20220808180533-48ffd364e11d h1:syOEA9/bCiLjrx4qKhKLbIKzIzDglf1auPJTrGV5qKE=
 github.com/youseebiggirl/redtower v0.0.0-20220808180533-48ffd364e11d/go.mod h1:okySd61gGPK+FjXEt1thJesXukF+NJK3fu5PvEa9Q/Q=
+gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
+gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
